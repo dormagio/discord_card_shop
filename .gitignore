@@ -1,0 +1,6 @@
+**/__pycache__/**
+**shop.db
+**config.json
+**service_account.json
+test.py
+configs/prices.json
