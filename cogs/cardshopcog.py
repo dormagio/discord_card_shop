@@ -158,7 +158,7 @@ class CardShopCog(commands.Cog):
         for c in self.server_shop.getAllCategories():
             inventory_channel = self.bot.get_channel(self.server_shop.config[c])
             inventory = self.server_shop.getInventoryByCategory(c)
-            await inventory_channel.send(f'Product Type {c} is priced at {self.server_shop.getPriceByCategory(c)} Birdbuckz\nInventory as of {time.ctime()} is:\n\n`ID    | Product Name`\n')
+            await inventory_channel.send(f'Product Type {c} is priced at {self.server_shop.getPriceByCategory(c)} Birdbuckz\nInventory as of {self.server_shop.getCurrentDateString()} is:\n\n`ID    | Product Name`\n')
         
             #Prepend ID #'s
             formatted_inventory = []
@@ -172,7 +172,7 @@ class CardShopCog(commands.Cog):
                 await inventory_channel.send(f"`{s}`")
         
     @commands.command(name='set_current_date', aliases=['set_date','timetravel'],brief='Sets the shop\'s current date to the provided date value.',description='Command usable only by Coders, Mods, and Vendors. Updates the current_date value and the listing of available products. Date format is yyyy-mm-dd')
-    @commands.has_any_role('Coder','Mod',Vendor')
+    @commands.has_any_role('Coder','Mod','Vendor')
     async def set_current_date(self, ctx, target_date : str):
         try:
             new_current_date = datetime.strptime(target_date,"%Y-%m-%d")
@@ -180,7 +180,8 @@ class CardShopCog(commands.Cog):
             await ctx.send(f'Provided date: {target_date} was not understood as a valid date. The expected format is yyyy-mm-dd')
         else:
             self.server_shop.setShopDate(new_current_date)
-            await ctx.send(f'[SUCCESS]: Current date now set to {self.server_shop.getCurrentDateString()}')
+            announcement_channel = self.bot.get_channel(self.server_shop.config['announcements'])
+            await announcement_channel.send(f'The shop date is now set to {self.server_shop.getCurrentDateString()}')
 
     @commands.command(name='deregister_player', aliases=['delete','delete_player','deregister'],brief='Deletes player entry from registry.',description='Command usable only by Coders, Mods, and Vendors. Takes the Discord ID of a registered player and permanently deletes their data.')
     @commands.has_any_role('Coder','Mod','Vendor')

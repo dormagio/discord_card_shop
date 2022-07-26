@@ -78,9 +78,9 @@ class shop:
     #Function that takes a datetime object and adds the date as yyyy-mm-dd to the config, then updates the enabled inventory based on the new date.
     def setShopDate(self,new_date):
         self.current_date = new_date
-        current_date_string = getCurrentDateString()
+        current_date_string = self.getCurrentDateString()
         self.config["current_date"] = current_date_string
-        updateEnabledInventory(new_current_date)
+        self.updateEnabledInventory(current_date_string)
         
         
     #Function that returns the earliest date (back in time) for which products will be considered available
@@ -92,10 +92,10 @@ class shop:
             return None
             
     #Function to only enable product between the backstock and "current" dates.
-    def updateEnabledInventory(self,new_current_date):
+    def updateEnabledInventory(self,current_date_string):
         #First disable all products
         self.inventory_cur.execute('UPDATE inventory SET enable = 0')
-        self.inventory_cur.execute('UPDATE inventory SET enable = 1 WHERE tcg_date BETWEEN (?) AND (?)', (self.getBackstockDate(),new_current_date))
+        self.inventory_cur.execute('UPDATE inventory SET enable = 1 WHERE tcg_date BETWEEN (?) AND (?)', (self.getBackstockDate(),current_date_string))
         for product_type in self.config["disabled_product_types"]:
             self.inventory_cur.execute('UPDATE inventory SET enable = 0 WHERE enable = 1 AND category = (?)', (product_type,))
         self.inventory_con.commit()
@@ -126,7 +126,7 @@ class shop:
     def getInventoryByCategory(self,category : str):
         self.inventory_cur.execute('SELECT rowid,set_name FROM inventory WHERE enable = 1 AND category = (?)', (category,))
         sub_inventory = self.inventory_cur.fetchall()
-        if sub_inventory is None:
+        if sub_inventory == '':
             sub_inventory = "No products of this type currently available."
         return sub_inventory
         
