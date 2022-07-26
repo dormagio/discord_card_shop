@@ -7,6 +7,7 @@ import customer
 import product
 import os
 from collections import Counter
+from datetime import datetime
 import csv
 from enum import Enum
 
@@ -39,6 +40,11 @@ class shop:
         self.inventory_con.row_factory = sqlite3.Row #Set the row_factory to the versatile row object that can be used either as a tuple or a dictionary keyed with field names.
         self.inventory_cur = self.inventory_con.cursor()
         
+        #To save time on operations, we're going to pull the current_date out of the config and store it as a datetime object. If the function returns None, then date checking is currently disabled.
+        self.current_date = self.getShopDate()
+        #If we are not using the date functions then it is assumed that the inventory is being manually curated. (This bot is already a bit of a bear to use so it is assumed you can run some simple SQL queries.)
+        if(self.current_date is not None):
+            self.updateEnabledInventory(self.config["current_date"])
         
         with open("./configs/prices.json", "r") as pricefile:
             self.prices = json.load(pricefile)
@@ -58,7 +64,39 @@ class shop:
     def saveConfig(self):
         with open(self.config_file_path, "w") as config_file:
             json.dump(self.config,config_file,sort_keys=True,indent=2)
+            
+    def getShopDate(self):
+        #If the current_date is set to "current_year" then date checking is disabled and we can ignore the date checking functions.
+        if(self.config["current_date"] == "current_year"):
+            return None
+        else:
+            return datetime.strptime(self.config["current_date"],"%Y-%m-%d")
         
+    #Function that takes a datetime object and adds the date as yyyy-mm-dd to the config, then updates the enabled inventory based on the new date.
+    def setShopDate(self,new_date):
+        self.current_date = new_date
+        current_date_string = new_date.strftime("%Y-%m-%d")
+        self.config["current_date"] = current_date_string
+        updateEnabledInventory(new_current_date)
+        
+        
+    #Function that returns the earliest date (back in time) for which products will be considered available
+    #Put another way, the backstock_interval field of the config is used to wind back a certain number of months from the "current_date" to simulate our fictional cardshop still having old product in stock.
+    def getBackstockDate(self):
+        if self.current_date is not None:
+            return self.current_date.replace(month=(self.current_date.month-self.config["backstock_interval"])).strftime("%Y-%m-%d")
+        else:
+            return None
+            
+    #Function to only enable product between the backstock and "current" dates.
+    def updateEnabledInventory(self,new_current_date):
+        #First disable all products
+        self.inventory_cur.execute('UPDATE inventory SET enable = 0')
+        self.inventory_cur.execute('UPDATE inventory SET enable = 1 WHERE tcg_date BETWEEN (?) AND (?)', (self.getBackstockDate(),new_current_date))
+        for product_type in self.config["disabled_product_types"]:
+            self.inventory_cur.execute('UPDATE inventory SET enable = 0 WHERE enable = 1 AND category = (?)', (product_type,))
+        self.inventory_con.commit()
+            
     def updateShop(self,not_first_call=True):
         #If this isn't the initial call to this function, save data.
         if(not_first_call):
@@ -68,6 +106,7 @@ class shop:
         
     #function to call when object is deleted.
     def closeUpShop(self):
+        self.saveConfig()
         self.saveAllCustomers()
         self.shop_con.close()
         self.inventory_con.close()
@@ -112,9 +151,14 @@ class shop:
         #Check if return was valid.
         if product_entry is None:
             print(f"Error: key {product_key} did not return a valid entry from the inventory database")
-        else: #Create a product object using the retrieved data
-            print(f"For debug purposes, the retrieved entry is\n\t{product_entry['set_name']}")
-            return self.makeProduct(product_entry,key_is_number,admin_override)
+        else: 
+            #Once we have assertained that the product is real, check if it is available for sale. If so, create a product object using the retrieved data
+            if product_entry["enable"] == 1:
+                return self.makeProduct(product_entry,key_is_number,admin_override)
+            else:
+                print(f"The following product is disabled: \n\t{product_entry['set_name']}")
+            
+        return None
         
     #Function that takes a list of values retrieved from the inventory table of the database and calls the appropriate constructor.
     #Expected fields, in order are:

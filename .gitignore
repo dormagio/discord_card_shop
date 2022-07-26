@@ -4,3 +4,5 @@
 **service_account.json
 test.py
 configs/prices.json
+test/check_enabled_rowid.sql
+test/test_shop.py

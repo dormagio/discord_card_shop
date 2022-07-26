@@ -1,4 +1,9 @@
 {
+  "current_date": "current_year",
+  "backstock_interval": 4,
+  "disabled_product_types": [
+    "overhead"
+  ],
   "token": "123ABC",
   "shop_database": "./database/shop.db",
   "inventory_database": "./database/inventory.db",
