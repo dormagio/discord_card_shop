@@ -71,11 +71,14 @@ class shop:
             return None
         else:
             return datetime.strptime(self.config["current_date"],"%Y-%m-%d")
+            
+    def getCurrentDateString(self):
+        return self.current_date.strftime("%Y-%m-%d")
         
     #Function that takes a datetime object and adds the date as yyyy-mm-dd to the config, then updates the enabled inventory based on the new date.
     def setShopDate(self,new_date):
         self.current_date = new_date
-        current_date_string = new_date.strftime("%Y-%m-%d")
+        current_date_string = getCurrentDateString()
         self.config["current_date"] = current_date_string
         updateEnabledInventory(new_current_date)
         
@@ -119,10 +122,12 @@ class shop:
     def getAllCategories(self):
         return self.prices.keys()
         
-    #Takes a string category and returns a list of tuples detailing every product matching that category from the database (rowid,set_name,)
+    #Takes a string category and returns a list of tuples detailing every product matching that category from the database that is currently enabled (rowid,set_name,)
     def getInventoryByCategory(self,category : str):
-        self.inventory_cur.execute('SELECT rowid,set_name FROM inventory WHERE category = (?)', (category,))
+        self.inventory_cur.execute('SELECT rowid,set_name FROM inventory WHERE enable = 1 AND category = (?)', (category,))
         sub_inventory = self.inventory_cur.fetchall()
+        if sub_inventory is None:
+            sub_inventory = "No products of this type currently available."
         return sub_inventory
         
     def mapNicknameToID(self,nickname):

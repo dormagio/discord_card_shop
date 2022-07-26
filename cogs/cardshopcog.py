@@ -5,6 +5,7 @@ import pack
 import shop
 import customer
 import time
+from datetime import datetime
 import gspread #Google sheets API. Requires user to have set up authentication with google sheets for a services account (https://docs.gspread.org/en/latest/oauth2.html)
 
 class CardShopCog(commands.Cog):
@@ -170,12 +171,16 @@ class CardShopCog(commands.Cog):
             for s in formatted_inventory:
                 await inventory_channel.send(f"`{s}`")
         
-    # @commands.command(name='register_player', aliases=['new_player'],brief='Adds new player to the player registry.',description='Command Usable only by Coders, Mods, and Vendors. Creates a new registry entry for a provided player based on the data in config.json, provided that that player does not already exists.')
-    # @commands.has_any_role('Coder','Mod','Vendor')
-    # async def register_player(self, ctx, user_id : str, user_nickname):
-        # result = self.server_shop.newCustomer(user_id, user_nickname)
-    
-        # await ctx.send(f'{ctx.author.mention} {result}')
+    @commands.command(name='set_current_date', aliases=['set_date','timetravel'],brief='Sets the shop\'s current date to the provided date value.',description='Command usable only by Coders, Mods, and Vendors. Updates the current_date value and the listing of available products. Date format is yyyy-mm-dd')
+    @commands.has_any_role('Coder','Mod',Vendor')
+    async def set_current_date(self, ctx, target_date : str):
+        try:
+            new_current_date = datetime.strptime(target_date,"%Y-%m-%d")
+        except ValueError:
+            await ctx.send(f'Provided date: {target_date} was not understood as a valid date. The expected format is yyyy-mm-dd')
+        else:
+            self.server_shop.setShopDate(new_current_date)
+            await ctx.send(f'[SUCCESS]: Current date now set to {self.server_shop.getCurrentDateString()}')
 
     @commands.command(name='deregister_player', aliases=['delete','delete_player','deregister'],brief='Deletes player entry from registry.',description='Command usable only by Coders, Mods, and Vendors. Takes the Discord ID of a registered player and permanently deletes their data.')
     @commands.has_any_role('Coder','Mod','Vendor')
