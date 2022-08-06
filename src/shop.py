@@ -87,7 +87,12 @@ class shop:
     #Put another way, the backstock_interval field of the config is used to wind back a certain number of months from the "current_date" to simulate our fictional cardshop still having old product in stock.
     def getBackstockDate(self):
         if self.current_date is not None:
-            return self.current_date.replace(month=(self.current_date.month-self.config["backstock_interval"])).strftime("%Y-%m-%d")
+            new_month = self.current_date.month-self.config["backstock_interval"]
+            new_year = self.current_date.year
+            if( new_month < 0):
+                new_month += 12
+                new_year -= 1
+            return self.current_date.replace(month=new_month,year=new_year).strftime("%Y-%m-%d")
         else:
             return None
             
